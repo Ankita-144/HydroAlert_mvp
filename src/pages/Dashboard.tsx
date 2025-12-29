@@ -4,7 +4,7 @@ import { StatCard } from '@/components/StatCard';
 import { WaterSourceCard } from '@/components/WaterSourceCard';
 import { RecentTestsTable } from '@/components/RecentTestsTable';
 import { AlertBanner } from '@/components/AlertBanner';
-import { mockWaterSources, mockWaterTests, mockDashboardStats } from '@/data/mockData';
+import { useWaterData } from '@/contexts/WaterDataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Droplets,
@@ -17,9 +17,10 @@ import {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { waterSources, waterTests, dashboardStats } = useWaterData();
   const [showAlert, setShowAlert] = useState(true);
 
-  const unsafeSource = mockWaterSources.find(s => s.status === 'unsafe');
+  const unsafeSource = waterSources.find(s => s.status === 'unsafe');
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,25 +52,25 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
             title="Total Sources"
-            value={mockDashboardStats.totalSources}
+            value={dashboardStats.totalSources}
             icon={Droplets}
             trend={{ value: 12, isPositive: true }}
           />
           <StatCard
             title="Safe"
-            value={mockDashboardStats.safeSources}
+            value={dashboardStats.safeSources}
             icon={CheckCircle}
             variant="safe"
           />
           <StatCard
             title="Borderline"
-            value={mockDashboardStats.borderlineSources}
+            value={dashboardStats.borderlineSources}
             icon={AlertTriangle}
             variant="borderline"
           />
           <StatCard
             title="Unsafe"
-            value={mockDashboardStats.unsafeSources}
+            value={dashboardStats.unsafeSources}
             icon={XCircle}
             variant="unsafe"
           />
@@ -84,7 +85,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tests Today</p>
-                <p className="text-2xl font-bold">{mockDashboardStats.testsToday}</p>
+                <p className="text-2xl font-bold">{dashboardStats.testsToday}</p>
               </div>
             </div>
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -98,7 +99,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">This Week</p>
-                <p className="text-2xl font-bold">{mockDashboardStats.testsThisWeek}</p>
+                <p className="text-2xl font-bold">{dashboardStats.testsThisWeek}</p>
               </div>
             </div>
           </div>
@@ -109,7 +110,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Active Alerts</p>
-                <p className="text-2xl font-bold">{mockDashboardStats.activeAlerts}</p>
+                <p className="text-2xl font-bold">{dashboardStats.activeAlerts}</p>
               </div>
             </div>
           </div>
@@ -121,10 +122,10 @@ export default function Dashboard() {
           <div className="lg:col-span-1">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold font-display text-lg">Water Sources</h2>
-              <span className="text-sm text-muted-foreground">{mockWaterSources.length} locations</span>
+              <span className="text-sm text-muted-foreground">{waterSources.length} locations</span>
             </div>
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-              {mockWaterSources
+              {waterSources
                 .sort((a, b) => {
                   const order = { unsafe: 0, borderline: 1, safe: 2 };
                   return order[a.status] - order[b.status];
@@ -137,7 +138,7 @@ export default function Dashboard() {
 
           {/* Recent Tests */}
           <div className="lg:col-span-2">
-            <RecentTestsTable tests={mockWaterTests} />
+            <RecentTestsTable tests={waterTests} />
           </div>
         </div>
       </main>

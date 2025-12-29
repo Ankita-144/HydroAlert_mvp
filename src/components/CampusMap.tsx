@@ -9,6 +9,7 @@ import { Button } from './ui/button';
 interface CampusMapProps {
   sources: WaterSource[];
   onSourceClick?: (source: WaterSource) => void;
+  onViewDetails?: (source: WaterSource) => void;
 }
 
 // Campus map positions (relative positions for the interactive map)
@@ -23,13 +24,19 @@ const mapPositions: Record<string, { x: number; y: number }> = {
   '8': { x: 75, y: 60 }, // Medical Center
 };
 
-export function CampusMap({ sources, onSourceClick }: CampusMapProps) {
+export function CampusMap({ sources, onSourceClick, onViewDetails }: CampusMapProps) {
   const [selectedSource, setSelectedSource] = useState<WaterSource | null>(null);
   const [hoveredSource, setHoveredSource] = useState<string | null>(null);
 
   const handleSourceClick = (source: WaterSource) => {
     setSelectedSource(source);
     onSourceClick?.(source);
+  };
+
+  const handleViewDetails = () => {
+    if (selectedSource && onViewDetails) {
+      onViewDetails(selectedSource);
+    }
   };
 
   return (
@@ -161,7 +168,7 @@ export function CampusMap({ sources, onSourceClick }: CampusMapProps) {
                   </span>
                 </div>
               </div>
-              <Button size="sm" className="flex-shrink-0">
+              <Button size="sm" className="flex-shrink-0" onClick={handleViewDetails}>
                 View Details
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
