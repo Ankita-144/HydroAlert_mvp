@@ -3,6 +3,9 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { WaterStatus } from '@/types/water';
+import { useWaterData } from '@/contexts/WaterDataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   Upload,
   Camera,
@@ -35,7 +38,11 @@ export function WaterTestUpload() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [selectedSource, setSelectedSource] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const { addTestResult, waterSources } = useWaterData();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -103,6 +110,38 @@ export function WaterTestUpload() {
     setSelectedImage(null);
     setAnalysisResult(null);
     setSelectedSource('');
+    setIsSaving(false);
+  };
+
+  const handleSaveResult = async () => {
+    if (!analysisResult || !selectedSource) return;
+
+    setIsSaving(true);
+    
+    // Simulate save delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    addTestResult(selectedSource, {
+      status: analysisResult.status,
+      phLevel: analysisResult.parameters.ph,
+      chlorine: analysisResult.parameters.chlorine,
+      turbidity: analysisResult.parameters.turbidity,
+      hardness: analysisResult.parameters.hardness,
+      testedBy: user?.name || 'Unknown User',
+      notes: analysisResult.status === 'safe' 
+        ? 'All parameters within normal range.'
+        : analysisResult.status === 'borderline'
+        ? 'Parameters slightly elevated. Monitoring recommended.'
+        : 'Critical levels detected. Immediate action required.',
+    });
+
+    toast({
+      title: 'Result Saved',
+      description: 'The test result has been saved and dashboard updated.',
+    });
+
+    setIsSaving(false);
+    navigate('/dashboard');
   };
 
   const getStatusIcon = (status: WaterStatus) => {
@@ -151,14 +190,9 @@ export function WaterTestUpload() {
               className="w-full h-10 px-3 rounded-lg border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="">Select a water source...</option>
-              <option value="1">Main Library Fountain</option>
-              <option value="2">Science Building Cooler</option>
-              <option value="3">Cafeteria Main</option>
-              <option value="4">Gym Water Station</option>
-              <option value="5">Dormitory Hall A</option>
-              <option value="6">Engineering Lab</option>
-              <option value="7">Art Center Fountain</option>
-              <option value="8">Medical Center</option>
+              {waterSources.map(source => (
+                <option key={source.id} value={source.id}>{source.name}</option>
+              ))}
             </select>
           </div>
 
@@ -315,13 +349,17 @@ export function WaterTestUpload() {
           </div>
 
           <div className="flex gap-3">
-            <Button variant="outline" onClick={resetUpload} className="flex-1">
+            <Button variant="outline" onClick={resetUpload} className="flex-1" disabled={isSaving}>
               <RotateCcw className="h-4 w-4 mr-2" />
               New Test
             </Button>
-            <Button className="flex-1">
-              Save Result
-              <CheckCircle className="h-4 w-4 ml-2" />
+            <Button className="flex-1" onClick={handleSaveResult} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              )}
+              {isSaving ? 'Saving...' : 'Save Result'}
             </Button>
           </div>
         </div>
