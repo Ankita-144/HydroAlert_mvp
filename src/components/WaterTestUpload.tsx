@@ -69,39 +69,88 @@ export function WaterTestUpload() {
     }
   }, []);
 
+  // Determine water status based on chlorine levels
+  // Safe: 0.2-0.5 mg/L (pink to violet strip color)
+  // Borderline: 0.1-0.2 mg/L or 0.5-1.0 mg/L
+  // Unsafe: <0.1 mg/L (too low, no disinfection) or >1.0 mg/L (too high)
+  const determineStatus = (chlorine: number): WaterStatus => {
+    if (chlorine >= 0.2 && chlorine <= 0.5) {
+      return 'safe'; // Pink to violet color range
+    } else if ((chlorine >= 0.1 && chlorine < 0.2) || (chlorine > 0.5 && chlorine <= 1.0)) {
+      return 'borderline';
+    } else {
+      return 'unsafe';
+    }
+  };
+
+  const getStripColorDescription = (chlorine: number): string => {
+    if (chlorine >= 0.2 && chlorine <= 0.5) {
+      return 'Pink to Violet (Safe Range)';
+    } else if (chlorine < 0.2) {
+      return 'Light Pink/Colorless (Low Chlorine)';
+    } else if (chlorine <= 1.0) {
+      return 'Dark Violet (Elevated Chlorine)';
+    } else {
+      return 'Deep Purple (High Chlorine)';
+    }
+  };
+
   const analyzeImage = async () => {
     setStep('analyzing');
     
-    // Simulate AI analysis
+    // Simulate AI analysis - detecting strip colors
     await new Promise(resolve => setTimeout(resolve, 2500));
     
-    // Mock result based on randomization for demo
-    const statuses: WaterStatus[] = ['safe', 'borderline', 'unsafe'];
-    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    // Simulate chlorine reading from strip color analysis
+    // Random value weighted towards realistic test results
+    const chlorineReading = Math.random() < 0.6 
+      ? 0.2 + Math.random() * 0.3  // 60% chance of safe range (0.2-0.5)
+      : Math.random() < 0.7 
+        ? 0.1 + Math.random() * 0.1  // Lower borderline
+        : 0.5 + Math.random() * 1.5; // Higher range (borderline to unsafe)
+    
+    const status = determineStatus(chlorineReading);
+    const stripColor = getStripColorDescription(chlorineReading);
     
     const mockResult: AnalysisResult = {
-      status: randomStatus,
+      status,
       confidence: 85 + Math.random() * 14,
       parameters: {
-        ph: randomStatus === 'safe' ? 7.0 + Math.random() * 0.3 : randomStatus === 'borderline' ? 7.5 + Math.random() * 0.5 : 8.0 + Math.random() * 0.5,
-        chlorine: randomStatus === 'safe' ? 0.8 + Math.random() * 0.4 : randomStatus === 'borderline' ? 1.5 + Math.random() * 0.5 : 3.0 + Math.random() * 1.5,
-        turbidity: randomStatus === 'safe' ? 0.3 + Math.random() * 0.3 : randomStatus === 'borderline' ? 1.0 + Math.random() * 0.5 : 2.0 + Math.random() * 1,
-        hardness: randomStatus === 'safe' ? 100 + Math.random() * 30 : randomStatus === 'borderline' ? 150 + Math.random() * 30 : 200 + Math.random() * 50,
+        ph: status === 'safe' ? 6.8 + Math.random() * 0.4 : status === 'borderline' ? 7.2 + Math.random() * 0.6 : 7.8 + Math.random() * 0.7,
+        chlorine: parseFloat(chlorineReading.toFixed(2)),
+        turbidity: status === 'safe' ? 0.2 + Math.random() * 0.3 : status === 'borderline' ? 0.6 + Math.random() * 0.4 : 1.2 + Math.random() * 0.8,
+        hardness: status === 'safe' ? 80 + Math.random() * 40 : status === 'borderline' ? 130 + Math.random() * 40 : 180 + Math.random() * 50,
       },
-      recommendations: randomStatus === 'safe' 
-        ? ['Water quality is within safe parameters.', 'Continue regular monitoring.']
-        : randomStatus === 'borderline'
-        ? ['Monitor closely for changes.', 'Consider additional testing within 24 hours.', 'Check filtration system.']
-        : ['Do not consume water from this source.', 'Notify maintenance immediately.', 'Post warning signage.', 'Schedule professional water testing.'],
+      recommendations: status === 'safe' 
+        ? [
+            `Strip color detected: ${stripColor}`,
+            'Chlorine level is within optimal range (0.2-0.5 mg/L).',
+            'Water is safe for consumption.',
+            'Continue regular monitoring schedule.'
+          ]
+        : status === 'borderline'
+        ? [
+            `Strip color detected: ${stripColor}`,
+            'Chlorine level is slightly outside optimal range.',
+            'Monitor closely and retest within 24 hours.',
+            'Check water treatment system if readings persist.'
+          ]
+        : [
+            `Strip color detected: ${stripColor}`,
+            chlorineReading < 0.1 ? 'Chlorine too low - insufficient disinfection.' : 'Chlorine too high - may cause irritation.',
+            'Do not consume water from this source.',
+            'Notify maintenance immediately.',
+            'Post warning signage at water source.'
+          ],
     };
     
     setAnalysisResult(mockResult);
     setStep('result');
     
     toast({
-      title: randomStatus === 'safe' ? 'Water is Safe ✓' : randomStatus === 'borderline' ? 'Borderline Quality ⚠' : 'Unsafe Water Detected ✕',
-      description: `Analysis complete with ${mockResult.confidence.toFixed(1)}% confidence.`,
-      variant: randomStatus === 'unsafe' ? 'destructive' : 'default',
+      title: status === 'safe' ? 'Water is Safe ✓' : status === 'borderline' ? 'Borderline Quality ⚠' : 'Unsafe Water Detected ✕',
+      description: `Chlorine: ${chlorineReading.toFixed(2)} mg/L - ${stripColor}`,
+      variant: status === 'unsafe' ? 'destructive' : 'default',
     });
   };
 
