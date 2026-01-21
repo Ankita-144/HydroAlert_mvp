@@ -36,6 +36,7 @@ interface AnalysisResult {
 export function WaterTestUpload() {
   const [step, setStep] = useState<UploadStep>('select');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [selectedSource, setSelectedSource] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -44,7 +45,54 @@ export function WaterTestUpload() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Normalize image to consistent dimensions
+  // Apply color normalization (brightness, contrast, saturation)
+  const normalizeColors = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    
+    // Calculate average brightness
+    let totalBrightness = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+    }
+    const avgBrightness = totalBrightness / (data.length / 4);
+    const targetBrightness = 128;
+    const brightnessFactor = targetBrightness / avgBrightness;
+    
+    // Contrast and saturation adjustments
+    const contrastFactor = 1.15; // Slight contrast boost
+    const saturationFactor = 1.2; // Slight saturation boost
+    
+    for (let i = 0; i < data.length; i += 4) {
+      let r = data[i];
+      let g = data[i + 1];
+      let b = data[i + 2];
+      
+      // Apply brightness normalization
+      r = Math.min(255, r * brightnessFactor);
+      g = Math.min(255, g * brightnessFactor);
+      b = Math.min(255, b * brightnessFactor);
+      
+      // Apply contrast
+      r = Math.min(255, Math.max(0, ((r - 128) * contrastFactor) + 128));
+      g = Math.min(255, Math.max(0, ((g - 128) * contrastFactor) + 128));
+      b = Math.min(255, Math.max(0, ((b - 128) * contrastFactor) + 128));
+      
+      // Apply saturation
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+      r = Math.min(255, Math.max(0, gray + saturationFactor * (r - gray)));
+      g = Math.min(255, Math.max(0, gray + saturationFactor * (g - gray)));
+      b = Math.min(255, Math.max(0, gray + saturationFactor * (b - gray)));
+      
+      data[i] = r;
+      data[i + 1] = g;
+      data[i + 2] = b;
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
+  };
+
+  // Normalize image to consistent dimensions and apply color normalization
   const normalizeImage = (imageDataUrl: string): Promise<string> => {
     return new Promise((resolve) => {
       const img = new window.Image();
@@ -70,6 +118,9 @@ export function WaterTestUpload() {
         if (ctx) {
           // Draw resized image
           ctx.drawImage(img, 0, 0, width, height);
+          
+          // Apply color normalization
+          normalizeColors(ctx, width, height);
           
           // Format timestamp - compact format
           const now = new Date();
@@ -113,13 +164,49 @@ export function WaterTestUpload() {
     });
   };
 
+  // Resize original image for display (without normalization)
+  const resizeOriginal = (imageDataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
+        
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+          const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+        }
+        
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      };
+      img.src = imageDataUrl;
+    });
+  };
+
   const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = async (e) => {
-        const originalImage = e.target?.result as string;
-        const normalizedImage = await normalizeImage(originalImage);
+        const rawImage = e.target?.result as string;
+        const [resizedOriginal, normalizedImage] = await Promise.all([
+          resizeOriginal(rawImage),
+          normalizeImage(rawImage)
+        ]);
+        setOriginalImage(resizedOriginal);
         setSelectedImage(normalizedImage);
         setStep('preview');
       };
@@ -133,8 +220,12 @@ export function WaterTestUpload() {
     if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = async (e) => {
-        const originalImage = e.target?.result as string;
-        const normalizedImage = await normalizeImage(originalImage);
+        const rawImage = e.target?.result as string;
+        const [resizedOriginal, normalizedImage] = await Promise.all([
+          resizeOriginal(rawImage),
+          normalizeImage(rawImage)
+        ]);
+        setOriginalImage(resizedOriginal);
         setSelectedImage(normalizedImage);
         setStep('preview');
       };
@@ -230,6 +321,7 @@ export function WaterTestUpload() {
   const resetUpload = () => {
     setStep('select');
     setSelectedImage(null);
+    setOriginalImage(null);
     setAnalysisResult(null);
     setSelectedSource('');
     setIsSaving(false);
@@ -355,21 +447,36 @@ export function WaterTestUpload() {
       )}
 
       {/* Preview Step */}
-      {step === 'preview' && selectedImage && (
+      {step === 'preview' && selectedImage && originalImage && (
         <div className="space-y-6 animate-fade-in">
           <div className="text-center">
-            <h2 className="text-2xl font-bold font-display">Preview Image</h2>
+            <h2 className="text-2xl font-bold font-display">Preview Images</h2>
             <p className="text-muted-foreground mt-2">
-              Make sure the test strip is clearly visible
+              Compare original and normalized versions
             </p>
           </div>
 
-          <div className="relative rounded-xl overflow-hidden border shadow-soft">
-            <img
-              src={selectedImage}
-              alt="Water test strip"
-              className="w-full h-auto max-h-96 object-contain bg-muted"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-center text-muted-foreground">Original</p>
+              <div className="relative rounded-xl overflow-hidden border shadow-soft">
+                <img
+                  src={originalImage}
+                  alt="Original water test strip"
+                  className="w-full h-auto max-h-72 object-contain bg-muted"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-center text-muted-foreground">Normalized</p>
+              <div className="relative rounded-xl overflow-hidden border shadow-soft ring-2 ring-primary/30">
+                <img
+                  src={selectedImage}
+                  alt="Normalized water test strip"
+                  className="w-full h-auto max-h-72 object-contain bg-muted"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="bg-accent/50 rounded-xl p-4">
