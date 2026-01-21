@@ -44,25 +44,76 @@ export function WaterTestUpload() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const embedTimestamp = (imageDataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+          // Draw the original image
+          ctx.drawImage(img, 0, 0);
+          
+          // Format timestamp
+          const now = new Date();
+          const timestamp = now.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          });
+          
+          // Calculate font size based on image width
+          const fontSize = Math.max(16, Math.floor(img.width / 25));
+          const padding = Math.floor(fontSize * 0.5);
+          
+          ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+          const textWidth = ctx.measureText(timestamp).width;
+          
+          // Draw semi-transparent background for timestamp
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+          ctx.fillRect(0, 0, textWidth + padding * 2, fontSize + padding * 2);
+          
+          // Draw timestamp text
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(timestamp, padding, fontSize + padding * 0.5);
+        }
+        
+        resolve(canvas.toDataURL('image/jpeg', 0.95));
+      };
+      img.src = imageDataUrl;
+    });
+  };
+
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setSelectedImage(e.target?.result as string);
+      reader.onload = async (e) => {
+        const originalImage = e.target?.result as string;
+        const timestampedImage = await embedTimestamp(originalImage);
+        setSelectedImage(timestampedImage);
         setStep('preview');
       };
       reader.readAsDataURL(file);
     }
   }, []);
 
-  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const file = event.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setSelectedImage(e.target?.result as string);
+      reader.onload = async (e) => {
+        const originalImage = e.target?.result as string;
+        const timestampedImage = await embedTimestamp(originalImage);
+        setSelectedImage(timestampedImage);
         setStep('preview');
       };
       reader.readAsDataURL(file);
