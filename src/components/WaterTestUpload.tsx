@@ -44,48 +44,70 @@ export function WaterTestUpload() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const embedTimestamp = (imageDataUrl: string): Promise<string> => {
+  // Normalize image to consistent dimensions
+  const normalizeImage = (imageDataUrl: string): Promise<string> => {
     return new Promise((resolve) => {
       const img = new window.Image();
       img.onload = () => {
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
+        
+        let width = img.width;
+        let height = img.height;
+        
+        // Calculate new dimensions maintaining aspect ratio
+        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+          const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+        
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = width;
+        canvas.height = height;
         const ctx = canvas.getContext('2d');
         
         if (ctx) {
-          // Draw the original image
-          ctx.drawImage(img, 0, 0);
+          // Draw resized image
+          ctx.drawImage(img, 0, 0, width, height);
           
-          // Format timestamp
+          // Format timestamp - compact format
           const now = new Date();
-          const timestamp = now.toLocaleString('en-US', {
-            year: 'numeric',
+          const dateStr = now.toLocaleDateString('en-US', {
             month: 'short',
             day: '2-digit',
+            year: 'numeric'
+          });
+          const timeStr = now.toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
-            second: '2-digit',
             hour12: true
           });
+          const timestamp = `${dateStr} • ${timeStr}`;
           
-          // Calculate font size based on image width
-          const fontSize = Math.max(16, Math.floor(img.width / 25));
-          const padding = Math.floor(fontSize * 0.5);
+          // Fixed small font size for consistency
+          const fontSize = 14;
+          const padding = 6;
           
-          ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+          ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
           const textWidth = ctx.measureText(timestamp).width;
           
-          // Draw semi-transparent background for timestamp
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-          ctx.fillRect(0, 0, textWidth + padding * 2, fontSize + padding * 2);
+          // Draw rounded background for timestamp
+          const bgHeight = fontSize + padding * 2;
+          const bgWidth = textWidth + padding * 2;
+          const radius = 4;
+          
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.beginPath();
+          ctx.roundRect(4, 4, bgWidth, bgHeight, radius);
+          ctx.fill();
           
           // Draw timestamp text
           ctx.fillStyle = '#ffffff';
-          ctx.fillText(timestamp, padding, fontSize + padding * 0.5);
+          ctx.fillText(timestamp, 4 + padding, 4 + fontSize + padding * 0.3);
         }
         
-        resolve(canvas.toDataURL('image/jpeg', 0.95));
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
       };
       img.src = imageDataUrl;
     });
@@ -97,8 +119,8 @@ export function WaterTestUpload() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const originalImage = e.target?.result as string;
-        const timestampedImage = await embedTimestamp(originalImage);
-        setSelectedImage(timestampedImage);
+        const normalizedImage = await normalizeImage(originalImage);
+        setSelectedImage(normalizedImage);
         setStep('preview');
       };
       reader.readAsDataURL(file);
@@ -112,8 +134,8 @@ export function WaterTestUpload() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const originalImage = e.target?.result as string;
-        const timestampedImage = await embedTimestamp(originalImage);
-        setSelectedImage(timestampedImage);
+        const normalizedImage = await normalizeImage(originalImage);
+        setSelectedImage(normalizedImage);
         setStep('preview');
       };
       reader.readAsDataURL(file);
