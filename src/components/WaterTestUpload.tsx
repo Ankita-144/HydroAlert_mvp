@@ -76,35 +76,35 @@ export function WaterTestUpload() {
           const dateStr = now.toLocaleDateString('en-US', {
             month: 'short',
             day: '2-digit',
-            year: 'numeric'
+            year: '2-digit'
           });
           const timeStr = now.toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: true
           });
-          const timestamp = `${dateStr} • ${timeStr}`;
+          const timestamp = `${dateStr} ${timeStr}`;
           
-          // Fixed small font size for consistency
-          const fontSize = 14;
-          const padding = 6;
+          // Smaller fixed font size
+          const fontSize = 10;
+          const padding = 4;
           
           ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
           const textWidth = ctx.measureText(timestamp).width;
           
-          // Draw rounded background for timestamp
+          // Draw compact rounded background
           const bgHeight = fontSize + padding * 2;
           const bgWidth = textWidth + padding * 2;
-          const radius = 4;
+          const radius = 3;
           
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
           ctx.beginPath();
-          ctx.roundRect(4, 4, bgWidth, bgHeight, radius);
+          ctx.roundRect(3, 3, bgWidth, bgHeight, radius);
           ctx.fill();
           
           // Draw timestamp text
           ctx.fillStyle = '#ffffff';
-          ctx.fillText(timestamp, 4 + padding, 4 + fontSize + padding * 0.3);
+          ctx.fillText(timestamp, 3 + padding, 3 + fontSize + padding * 0.2);
         }
         
         resolve(canvas.toDataURL('image/jpeg', 0.9));
