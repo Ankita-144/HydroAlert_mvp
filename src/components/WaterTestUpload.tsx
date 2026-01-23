@@ -7,9 +7,7 @@ import { useWaterData } from '@/contexts/WaterDataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  Upload,
   Camera,
-  Image,
   Loader2,
   CheckCircle,
   AlertTriangle,
@@ -389,9 +387,9 @@ export function WaterTestUpload() {
       {step === 'select' && (
         <div className="space-y-6 animate-fade-in">
           <div className="text-center">
-            <h2 className="text-2xl font-bold font-display">Upload Water Test Strip</h2>
+            <h2 className="text-2xl font-bold font-display">Capture Water Test Strip</h2>
             <p className="text-muted-foreground mt-2">
-              Take a photo of your water test strip for AI analysis
+              Use your camera to photograph the test strip for instant AI analysis
             </p>
           </div>
 
@@ -410,39 +408,29 @@ export function WaterTestUpload() {
             </select>
           </div>
 
-          {/* Upload Area */}
-          <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-            className="relative border-2 border-dashed border-primary/30 rounded-xl p-12 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all cursor-pointer group"
-          >
+          {/* Camera Capture Area */}
+          <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-2 border-primary/20 hover:border-primary/40 transition-all group">
             <input
               type="file"
               accept="image/*"
               capture="environment"
               onChange={handleFileSelect}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
-            <div className="text-center">
-              <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Upload className="h-8 w-8 text-primary" />
+            <div className="py-16 px-8 text-center">
+              <div className="mx-auto h-24 w-24 rounded-full bg-primary/20 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/30 transition-all shadow-lg shadow-primary/20">
+                <Camera className="h-12 w-12 text-primary" />
               </div>
-              <p className="font-medium">Drag and drop your image here</p>
-              <p className="text-sm text-muted-foreground mt-1">or click to browse</p>
+              <h3 className="text-xl font-semibold text-foreground mb-2">Take a Photo</h3>
+              <p className="text-muted-foreground max-w-xs mx-auto">
+                Point your camera at the test strip and capture a clear image
+              </p>
+              <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                <Camera className="h-4 w-4" />
+                Tap to open camera
+              </div>
             </div>
           </div>
-
-          {/* Camera Option */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-sm text-muted-foreground">or</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-
-          <Button variant="outline" className="w-full h-14 text-base" onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}>
-            <Camera className="h-5 w-5 mr-2" />
-            Take Photo with Camera
-          </Button>
         </div>
       )}
 
@@ -540,22 +528,27 @@ export function WaterTestUpload() {
           </div>
 
           {/* Parameters */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-card rounded-xl border p-4 text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">pH Level</p>
-              <p className="text-2xl font-bold mt-1">{analysisResult.parameters.ph.toFixed(1)}</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-xl border border-blue-500/20 p-4 text-center">
+              <div className="h-10 w-10 mx-auto mb-2 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <span className="text-blue-600 font-bold text-sm">pH</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{analysisResult.parameters.ph.toFixed(1)}</p>
+              <p className="text-xs text-muted-foreground mt-1">pH Level</p>
             </div>
-            <div className="bg-card rounded-xl border p-4 text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Chlorine</p>
-              <p className="text-2xl font-bold mt-1">{analysisResult.parameters.chlorine.toFixed(1)} <span className="text-sm font-normal">ppm</span></p>
+            <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 rounded-xl border border-emerald-500/20 p-4 text-center">
+              <div className="h-10 w-10 mx-auto mb-2 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <span className="text-emerald-600 font-bold text-sm">Cl</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{analysisResult.parameters.chlorine.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Chlorine (ppm)</p>
             </div>
-            <div className="bg-card rounded-xl border p-4 text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Turbidity</p>
-              <p className="text-2xl font-bold mt-1">{analysisResult.parameters.turbidity.toFixed(1)} <span className="text-sm font-normal">NTU</span></p>
-            </div>
-            <div className="bg-card rounded-xl border p-4 text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Hardness</p>
-              <p className="text-2xl font-bold mt-1">{analysisResult.parameters.hardness.toFixed(0)} <span className="text-sm font-normal">ppm</span></p>
+            <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl border border-amber-500/20 p-4 text-center">
+              <div className="h-10 w-10 mx-auto mb-2 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <span className="text-amber-600 font-bold text-sm">H</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{analysisResult.parameters.hardness.toFixed(0)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Hardness (ppm)</p>
             </div>
           </div>
 
