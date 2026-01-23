@@ -1,0 +1,4 @@
+project_id = "dryzktbtnaiiuufrswvn"
+
+[functions.analyze-water-strip]
+verify_jwt = false

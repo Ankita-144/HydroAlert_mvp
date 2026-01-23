@@ -6,6 +6,7 @@ import { WaterStatus } from '@/types/water';
 import { useWaterData } from '@/contexts/WaterDataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Camera,
   Loader2,
@@ -258,62 +259,92 @@ export function WaterTestUpload() {
   };
 
   const analyzeImage = async () => {
+    if (!selectedImage) return;
+    
     setStep('analyzing');
     
-    // Simulate AI analysis - detecting strip colors
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    
-    // Simulate chlorine reading from strip color analysis
-    // Random value weighted towards realistic test results
-    const chlorineReading = Math.random() < 0.6 
-      ? 0.2 + Math.random() * 0.3  // 60% chance of safe range (0.2-0.5)
-      : Math.random() < 0.7 
-        ? 0.1 + Math.random() * 0.1  // Lower borderline
-        : 0.5 + Math.random() * 1.5; // Higher range (borderline to unsafe)
-    
-    const status = determineStatus(chlorineReading);
-    const stripColor = getStripColorDescription(chlorineReading);
-    
-    const mockResult: AnalysisResult = {
-      status,
-      confidence: 85 + Math.random() * 14,
-      parameters: {
-        ph: status === 'safe' ? 6.8 + Math.random() * 0.4 : status === 'borderline' ? 7.2 + Math.random() * 0.6 : 7.8 + Math.random() * 0.7,
-        chlorine: parseFloat(chlorineReading.toFixed(2)),
-        turbidity: status === 'safe' ? 0.2 + Math.random() * 0.3 : status === 'borderline' ? 0.6 + Math.random() * 0.4 : 1.2 + Math.random() * 0.8,
-        hardness: status === 'safe' ? 80 + Math.random() * 40 : status === 'borderline' ? 130 + Math.random() * 40 : 180 + Math.random() * 50,
-      },
-      recommendations: status === 'safe' 
-        ? [
-            `Strip color detected: ${stripColor}`,
-            'Chlorine level is within optimal range (0.2-0.5 mg/L).',
-            'Water is safe for consumption.',
-            'Continue regular monitoring schedule.'
-          ]
-        : status === 'borderline'
-        ? [
-            `Strip color detected: ${stripColor}`,
-            'Chlorine level is slightly outside optimal range.',
-            'Monitor closely and retest within 24 hours.',
-            'Check water treatment system if readings persist.'
-          ]
-        : [
-            `Strip color detected: ${stripColor}`,
-            chlorineReading < 0.1 ? 'Chlorine too low - insufficient disinfection.' : 'Chlorine too high - may cause irritation.',
-            'Do not consume water from this source.',
-            'Notify maintenance immediately.',
-            'Post warning signage at water source.'
-          ],
-    };
-    
-    setAnalysisResult(mockResult);
-    setStep('result');
-    
-    toast({
-      title: status === 'safe' ? 'Water is Safe ✓' : status === 'borderline' ? 'Borderline Quality ⚠' : 'Unsafe Water Detected ✕',
-      description: `Chlorine: ${chlorineReading.toFixed(2)} mg/L - ${stripColor}`,
-      variant: status === 'unsafe' ? 'destructive' : 'default',
-    });
+    try {
+      // Call the edge function with the normalized image
+      const { data, error } = await supabase.functions.invoke('analyze-water-strip', {
+        body: { imageBase64: selectedImage }
+      });
+
+      if (error) {
+        console.error('Analysis error:', error);
+        toast({
+          title: 'Analysis Failed',
+          description: error.message || 'Could not analyze the test strip. Please try again.',
+          variant: 'destructive',
+        });
+        setStep('preview');
+        return;
+      }
+
+      // Handle rate limit or payment errors from the response
+      if (data?.error) {
+        toast({
+          title: 'Analysis Error',
+          description: data.error,
+          variant: 'destructive',
+        });
+        setStep('preview');
+        return;
+      }
+
+      const { chlorine, ph, hardness, confidence, chlorineColorObserved, notes } = data;
+      
+      const status = determineStatus(chlorine);
+      const stripColor = chlorineColorObserved || getStripColorDescription(chlorine);
+      
+      const result: AnalysisResult = {
+        status,
+        confidence: confidence || 85,
+        parameters: {
+          ph: ph || 7.0,
+          chlorine: chlorine || 0,
+          turbidity: 0, // Not analyzed
+          hardness: hardness || 100,
+        },
+        recommendations: status === 'safe' 
+          ? [
+              `Strip color detected: ${stripColor}`,
+              'Chlorine level is within optimal range (0.2-0.5 mg/L).',
+              'Water is safe for consumption.',
+              notes || 'Continue regular monitoring schedule.'
+            ]
+          : status === 'borderline'
+          ? [
+              `Strip color detected: ${stripColor}`,
+              'Chlorine level is slightly outside optimal range.',
+              'Monitor closely and retest within 24 hours.',
+              notes || 'Check water treatment system if readings persist.'
+            ]
+          : [
+              `Strip color detected: ${stripColor}`,
+              chlorine < 0.1 ? 'Chlorine too low - insufficient disinfection.' : 'Chlorine too high - may cause irritation.',
+              'Do not consume water from this source.',
+              'Notify maintenance immediately.',
+              notes || 'Post warning signage at water source.'
+            ],
+      };
+      
+      setAnalysisResult(result);
+      setStep('result');
+      
+      toast({
+        title: status === 'safe' ? 'Water is Safe ✓' : status === 'borderline' ? 'Borderline Quality ⚠' : 'Unsafe Water Detected ✕',
+        description: `Chlorine: ${chlorine.toFixed(2)} mg/L - ${stripColor}`,
+        variant: status === 'unsafe' ? 'destructive' : 'default',
+      });
+    } catch (err) {
+      console.error('Analysis error:', err);
+      toast({
+        title: 'Analysis Failed',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+      setStep('preview');
+    }
   };
 
   const resetUpload = () => {
