@@ -196,6 +196,17 @@ export function WaterTestUpload() {
   };
 
   const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedSource) {
+      toast({
+        title: 'Water Source Required',
+        description: 'Please select a water source before taking a photo.',
+        variant: 'destructive',
+      });
+      // Reset the input so the same file can be selected again
+      event.target.value = '';
+      return;
+    }
+
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -211,7 +222,7 @@ export function WaterTestUpload() {
       };
       reader.readAsDataURL(file);
     }
-  }, []);
+  }, [selectedSource, toast]);
 
   const handleDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
