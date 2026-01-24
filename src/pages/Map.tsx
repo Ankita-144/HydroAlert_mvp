@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Header } from '@/components/Header';
-import { CampusMap } from '@/components/CampusMap';
+import { InteractiveMap } from '@/components/InteractiveMap';
 import { useWaterData } from '@/contexts/WaterDataContext';
 import { WaterSource } from '@/types/water';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -38,7 +38,7 @@ export default function Map() {
         </div>
 
         <div className="h-[calc(100vh-200px)] min-h-[500px]">
-          <CampusMap sources={waterSources} onViewDetails={handleViewDetails} />
+          <InteractiveMap sources={waterSources} onViewDetails={handleViewDetails} />
         </div>
       </main>
 
