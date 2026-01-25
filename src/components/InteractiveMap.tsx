@@ -1,14 +1,22 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { WaterSource } from '@/types/water';
 import { StatusBadge } from './StatusBadge';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { formatDistanceToNow } from 'date-fns';
-import { Building, Clock, Navigation, Locate, ChevronRight, Shuffle, MapPin, X } from 'lucide-react';
+import { Building, Clock, Navigation, Locate, ChevronRight, Shuffle, MapPin, X, Search, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+
+interface SearchResult {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+}
 
 interface InteractiveMapProps {
   sources: WaterSource[];
@@ -158,6 +166,15 @@ export function InteractiveMap({ sources, onViewDetails }: InteractiveMapProps) 
   const [customPointMode, setCustomPointMode] = useState(false);
   const [customPoint, setCustomPoint] = useState<CustomPoint | null>(null);
   const popupRefs = useRef<{ [key: string]: L.Popup }>({});
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchMarker, setSearchMarker] = useState<[number, number] | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Calculate map center from sources
   const center = useMemo(() => {
@@ -239,23 +256,180 @@ export function InteractiveMap({ sources, onViewDetails }: InteractiveMapProps) 
     setCustomPointMode(false);
   };
 
+  // Search for places using Nominatim
+  const searchPlaces = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          },
+        }
+      );
+      const data: SearchResult[] = await response.json();
+      setSearchResults(data);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Debounced search
+  const handleSearchInput = (value: string) => {
+    setSearchQuery(value);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    if (value.trim()) {
+      searchTimeoutRef.current = setTimeout(() => {
+        searchPlaces(value);
+      }, 300);
+    } else {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Handle search result selection
+  const handleSelectSearchResult = (result: SearchResult) => {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    setFlyToLocation([lat, lng]);
+    setSearchMarker([lat, lng]);
+    setSearchQuery(result.display_name.split(',')[0]);
+    setShowSearchResults(false);
+    setSelectedSource(null);
+    setCustomPoint(null);
+  };
+
+  // Handle search submit
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchResults.length > 0) {
+      handleSelectSearchResult(searchResults[0]);
+    } else if (searchQuery.trim()) {
+      searchPlaces(searchQuery);
+    }
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+    setSearchMarker(null);
+  };
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Handle marker click - only show bottom panel, close any popups
   const handleMarkerClick = (source: WaterSource) => {
     setSelectedSource(source);
+    setSearchMarker(null);
     setCustomPoint(null);
     setCustomPointMode(false);
   };
+
+  // Search result marker icon
+  const searchMarkerIcon = L.divIcon({
+    className: 'search-marker',
+    html: `
+      <div class="search-marker-container">
+        <div class="search-marker-pulse"></div>
+        <div class="search-marker-pin">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 60%; height: 60%;">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+        </div>
+      </div>
+    `,
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+  });
 
   return (
     <div className="relative w-full h-full min-h-[500px] rounded-xl overflow-hidden border shadow-soft">
       {/* Map Header */}
       <div className="absolute top-0 left-0 right-0 p-4 bg-card/90 backdrop-blur-md z-[1000] pointer-events-none border-b border-border/50">
-        <div className="flex items-center justify-between pointer-events-auto">
-          <div>
+        <div className="flex items-center justify-between pointer-events-auto gap-3">
+          <div className="hidden sm:block flex-shrink-0">
             <h3 className="font-semibold font-display text-lg">Campus Water Sources</h3>
             <p className="text-sm text-muted-foreground">{sources.length} locations monitored</p>
           </div>
-          <div className="flex items-center gap-2">
+          
+          {/* Search Bar */}
+          <div ref={searchContainerRef} className="relative flex-1 max-w-md">
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Search places..."
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                className="pl-9 pr-9 bg-background/80 backdrop-blur-sm"
+              />
+              {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+              )}
+              {searchQuery && !isSearching && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </form>
+            
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg overflow-hidden z-[1001]">
+                {searchResults.map((result) => (
+                  <button
+                    key={result.place_id}
+                    onClick={() => handleSelectSearchResult(result)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-start gap-2"
+                  >
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <span className="line-clamp-2">{result.display_name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {showSearchResults && searchResults.length === 0 && searchQuery && !isSearching && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg overflow-hidden z-[1001]">
+                <div className="px-3 py-2 text-sm text-muted-foreground">No results found</div>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               variant={customPointMode ? "default" : "outline"}
               size="sm"
@@ -266,7 +440,7 @@ export function InteractiveMap({ sources, onViewDetails }: InteractiveMapProps) 
               )}
             >
               <MapPin className="h-4 w-4" />
-              <span className="ml-2 hidden sm:inline">Custom Point</span>
+              <span className="ml-2 hidden lg:inline">Custom Point</span>
             </Button>
             <Button
               variant="outline"
@@ -276,7 +450,7 @@ export function InteractiveMap({ sources, onViewDetails }: InteractiveMapProps) 
               disabled={sources.length === 0}
             >
               <Shuffle className="h-4 w-4" />
-              <span className="ml-2 hidden sm:inline">Random</span>
+              <span className="ml-2 hidden lg:inline">Random</span>
             </Button>
             <Button
               variant="outline"
@@ -290,7 +464,7 @@ export function InteractiveMap({ sources, onViewDetails }: InteractiveMapProps) 
               ) : (
                 <Navigation className="h-4 w-4" />
               )}
-              <span className="ml-2 hidden sm:inline">My Location</span>
+              <span className="ml-2 hidden lg:inline">My Location</span>
             </Button>
           </div>
         </div>
@@ -368,6 +542,17 @@ export function InteractiveMap({ sources, onViewDetails }: InteractiveMapProps) 
             position={[customPoint.lat, customPoint.lng]}
             icon={createCustomPointIcon()}
           />
+        )}
+
+        {/* Search result marker */}
+        {searchMarker && (
+          <Marker position={searchMarker} icon={searchMarkerIcon}>
+            <Popup>
+              <div className="text-center">
+                <p className="font-medium text-sm">{searchQuery}</p>
+              </div>
+            </Popup>
+          </Marker>
         )}
 
         {/* User location marker */}
