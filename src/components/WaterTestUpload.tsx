@@ -32,7 +32,15 @@ interface AnalysisResult {
   recommendations: string[];
 }
 
-export function WaterTestUpload() {
+interface WaterTestUploadProps {
+  customLocation?: {
+    lat: number;
+    lng: number;
+    name: string;
+  };
+}
+
+export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
   const [step, setStep] = useState<UploadStep>('select');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [originalImage, setOriginalImage] = useState<string | null>(null);

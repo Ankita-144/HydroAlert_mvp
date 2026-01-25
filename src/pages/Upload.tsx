@@ -2,10 +2,19 @@ import React from 'react';
 import { Header } from '@/components/Header';
 import { WaterTestUpload } from '@/components/WaterTestUpload';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, MapPin } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+
+interface CustomLocation {
+  lat: number;
+  lng: number;
+  name: string;
+}
 
 export default function Upload() {
   const { user } = useAuth();
+  const location = useLocation();
+  const customLocation = (location.state as { customLocation?: CustomLocation })?.customLocation;
 
   return (
     <div className="min-h-screen bg-background">
@@ -20,6 +29,21 @@ export default function Upload() {
             </p>
           </div>
 
+          {customLocation && (
+            <div className="mb-8 p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-sm">Custom Location Test</p>
+                <p className="text-sm text-muted-foreground">
+                  Testing at: {customLocation.name}
+                </p>
+                <p className="text-xs text-muted-foreground font-mono mt-1">
+                  {customLocation.lat.toFixed(6)}, {customLocation.lng.toFixed(6)}
+                </p>
+              </div>
+            </div>
+          )}
+
           {user?.role === 'student' && (
             <div className="mb-8 p-4 rounded-xl bg-status-borderline-bg border border-status-borderline/20 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-status-borderline flex-shrink-0 mt-0.5" />
@@ -32,7 +56,7 @@ export default function Upload() {
             </div>
           )}
 
-          <WaterTestUpload />
+          <WaterTestUpload customLocation={customLocation} />
         </div>
       </main>
     </div>
