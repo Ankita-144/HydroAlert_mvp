@@ -2,21 +2,22 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { WaterSource, WaterTest, DashboardStats, WaterStatus } from '@/types/water';
 import { mockWaterSources as initialSources, mockWaterTests as initialTests } from '@/data/mockData';
 
-interface WaterDataContextType {
-  waterSources: WaterSource[];
-  waterTests: WaterTest[];
-  dashboardStats: DashboardStats;
-  addTestResult: (sourceId: string, result: {
-    status: WaterStatus;
-    phLevel: number;
-    chlorine: number;
-    turbidity: number;
-    hardness: number;
-    testedBy: string;
-    notes?: string;
-  }) => void;
-  getSourceById: (id: string) => WaterSource | undefined;
-}
+ interface WaterDataContextType {
+   waterSources: WaterSource[];
+   waterTests: WaterTest[];
+   dashboardStats: DashboardStats;
+   addTestResult: (sourceId: string, result: {
+     status: WaterStatus;
+     phLevel: number;
+     chlorine: number;
+     turbidity: number;
+     hardness: number;
+     testedBy: string;
+     notes?: string;
+   }) => void;
+   addCustomSource: (name: string, latitude: number, longitude: number) => string;
+   getSourceById: (id: string) => WaterSource | undefined;
+ }
 
 const WaterDataContext = createContext<WaterDataContextType | undefined>(undefined);
 
@@ -88,6 +89,23 @@ export function WaterDataProvider({ children }: { children: ReactNode }) {
 
   const getSourceById = (id: string) => waterSources.find(s => s.id === id);
 
+   const addCustomSource = (name: string, latitude: number, longitude: number): string => {
+     const customId = `custom-${Date.now()}`;
+     const newSource: WaterSource = {
+       id: customId,
+       name,
+       location: `Custom Location`,
+       latitude,
+       longitude,
+       status: 'borderline',
+       lastTested: new Date(),
+       testedBy: 'System',
+       buildingCode: 'CUSTOM'
+     };
+     setWaterSources(prev => [...prev, newSource]);
+     return customId;
+   };
+ 
   const dashboardStats = calculateStats(waterSources, waterTests);
 
   return (
@@ -96,6 +114,7 @@ export function WaterDataProvider({ children }: { children: ReactNode }) {
       waterTests,
       dashboardStats,
       addTestResult,
+      addCustomSource,
       getSourceById,
     }}>
       {children}
