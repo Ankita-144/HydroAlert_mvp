@@ -45,12 +45,22 @@ export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [selectedSource, setSelectedSource] = useState<string>('');
+  // Use 'custom' as a special ID for custom locations
+  const [selectedSource, setSelectedSource] = useState<string>(customLocation ? 'custom' : '');
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const { addTestResult, waterSources } = useWaterData();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Get the display name for the selected source
+  const getSelectedSourceName = () => {
+    if (selectedSource === 'custom' && customLocation) {
+      return customLocation.name;
+    }
+    const source = waterSources.find(s => s.id === selectedSource);
+    return source?.name || '';
+  };
 
   // Apply color normalization (brightness, contrast, saturation)
   const normalizeColors = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
@@ -383,24 +393,33 @@ export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
     // Simulate save delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    addTestResult(selectedSource, {
-      status: analysisResult.status,
-      phLevel: analysisResult.parameters.ph,
-      chlorine: analysisResult.parameters.chlorine,
-      turbidity: analysisResult.parameters.turbidity,
-      hardness: analysisResult.parameters.hardness,
-      testedBy: user?.name || 'Unknown User',
-      notes: analysisResult.status === 'safe' 
-        ? 'All parameters within normal range.'
-        : analysisResult.status === 'borderline'
-        ? 'Parameters slightly elevated. Monitoring recommended.'
-        : 'Critical levels detected. Immediate action required.',
-    });
+    // For custom locations, we don't have a source ID in the system
+    // So we'll just show a success message
+    if (selectedSource === 'custom' && customLocation) {
+      toast({
+        title: 'Result Saved',
+        description: `Test result for "${customLocation.name}" recorded successfully.`,
+      });
+    } else {
+      addTestResult(selectedSource, {
+        status: analysisResult.status,
+        phLevel: analysisResult.parameters.ph,
+        chlorine: analysisResult.parameters.chlorine,
+        turbidity: analysisResult.parameters.turbidity,
+        hardness: analysisResult.parameters.hardness,
+        testedBy: user?.name || 'Unknown User',
+        notes: analysisResult.status === 'safe' 
+          ? 'All parameters within normal range.'
+          : analysisResult.status === 'borderline'
+          ? 'Parameters slightly elevated. Monitoring recommended.'
+          : 'Critical levels detected. Immediate action required.',
+      });
 
-    toast({
-      title: 'Result Saved',
-      description: 'The test result has been saved and dashboard updated.',
-    });
+      toast({
+        title: 'Result Saved',
+        description: 'The test result has been saved and dashboard updated.',
+      });
+    }
 
     setIsSaving(false);
     navigate('/dashboard');
@@ -452,10 +471,22 @@ export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
               className="w-full h-10 px-3 rounded-lg border bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="">Select a water source...</option>
-              {waterSources.map(source => (
-                <option key={source.id} value={source.id}>{source.name}</option>
-              ))}
+              {customLocation && (
+                <option value="custom" className="font-medium text-primary">
+                  📍 {customLocation.name}
+                </option>
+              )}
+              <optgroup label="Monitored Sources">
+                {waterSources.map(source => (
+                  <option key={source.id} value={source.id}>{source.name}</option>
+                ))}
+              </optgroup>
             </select>
+            {selectedSource === 'custom' && customLocation && (
+              <p className="text-xs text-muted-foreground mt-2 font-mono">
+                Coordinates: {customLocation.lat.toFixed(6)}, {customLocation.lng.toFixed(6)}
+              </p>
+            )}
           </div>
 
           {/* Camera Capture Area */}

@@ -29,31 +29,55 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert water quality analyst specializing in test strip analysis. 
-Analyze the water test strip image and extract the following parameters:
+    const systemPrompt = `You are a HIGHLY PRECISE water quality analyst specializing in colorimetric test strip analysis. Your analysis must be EXTREMELY ACCURATE based on exact color matching.
 
-1. **Chlorine Level** (mg/L or ppm):
-   - Look for the chlorine indicator pad color
-   - Pink to light violet = 0.2-0.5 mg/L (SAFE - optimal range)
-   - Light pink or colorless = <0.2 mg/L (LOW - insufficient disinfection)
-   - Dark violet = 0.5-1.0 mg/L (SLIGHTLY ELEVATED)
-   - Deep purple = >1.0 mg/L (HIGH - may cause irritation)
+## CRITICAL ANALYSIS INSTRUCTIONS:
 
-2. **pH Level** (0-14 scale):
-   - Look for the pH indicator pad color
-   - Yellow-green = acidic (pH 5-6)
-   - Green = neutral (pH 7)
-   - Blue-green to blue = alkaline (pH 8-9)
-   - Ideal drinking water: 6.5-8.5
+### 1. CHLORINE LEVEL (mg/L) - PRIMARY INDICATOR
+Analyze the chlorine indicator pad with EXTREME PRECISION:
+- **Colorless/Very Light Yellow**: 0.0 mg/L (no chlorine detected)
+- **Very Light Pink (barely visible)**: 0.1 mg/L
+- **Light Pink**: 0.2 mg/L (entering safe zone)
+- **Pink**: 0.3 mg/L (optimal - middle of safe range)
+- **Rose Pink**: 0.4 mg/L (optimal)
+- **Pink-Violet transition**: 0.5 mg/L (upper safe boundary)
+- **Light Violet**: 0.6-0.7 mg/L (slightly elevated)
+- **Violet**: 0.8-1.0 mg/L (elevated)
+- **Dark Violet/Purple**: 1.0-1.5 mg/L (high)
+- **Deep Purple**: 2.0+ mg/L (very high)
 
-3. **Hardness** (ppm or mg/L as CaCO3):
-   - Look for the hardness indicator pad
-   - Soft: 0-60 ppm
-   - Moderately hard: 61-120 ppm
-   - Hard: 121-180 ppm
-   - Very hard: >180 ppm
+SAFE RANGE: 0.2-0.5 mg/L (Pink to Pink-Violet colors)
 
-Analyze the colors carefully and provide your best estimates based on what you see.`;
+### 2. pH LEVEL (0-14 scale)
+Match the pH indicator pad color PRECISELY:
+- **Orange-Yellow**: pH 5.0-5.5 (acidic)
+- **Yellow**: pH 6.0-6.5 (slightly acidic)
+- **Yellow-Green**: pH 6.5-7.0 (near neutral)
+- **Green**: pH 7.0-7.5 (neutral - ideal)
+- **Blue-Green**: pH 7.5-8.0 (slightly alkaline)
+- **Light Blue**: pH 8.0-8.5 (alkaline)
+- **Blue**: pH 8.5-9.0 (more alkaline)
+- **Dark Blue/Purple**: pH 9.0+ (highly alkaline)
+
+IDEAL RANGE: 6.5-8.5 for drinking water
+
+### 3. HARDNESS (ppm as CaCO3)
+Analyze hardness indicator carefully:
+- **Unchanged/Light**: 0-25 ppm (very soft)
+- **Light color change**: 25-75 ppm (soft)
+- **Moderate color**: 75-150 ppm (moderately hard)
+- **Strong color**: 150-250 ppm (hard)
+- **Very dark**: 250+ ppm (very hard)
+
+## PRECISION REQUIREMENTS:
+1. Examine each color pad individually and compare to reference standards
+2. Consider lighting conditions and adjust interpretation accordingly
+3. Be specific with decimal values (e.g., 0.35 mg/L, not just 0.3 or 0.4)
+4. If colors are between two reference points, interpolate precisely
+5. Note any image quality issues that may affect accuracy
+6. Provide confidence based on image clarity and color distinction
+
+Focus on the actual colors visible - do not assume or guess. If a color pad is unclear, note it but still provide your best estimate.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -76,7 +100,15 @@ Analyze the colors carefully and provide your best estimates based on what you s
               },
               {
                 type: "text",
-                text: "Analyze this water test strip and extract the chlorine level, pH level, and hardness values. Provide specific numeric estimates based on the colors you observe.",
+                text: `Analyze this water test strip image with MAXIMUM PRECISION:
+
+1. Identify each color indicator pad on the strip
+2. Match each color EXACTLY to the reference ranges provided
+3. Provide PRECISE numeric values (use decimals, e.g., 0.35 not just 0.3)
+4. Describe the exact color you observe for each parameter
+5. Rate your confidence based on image quality and color clarity
+
+Focus on: Chlorine (most critical for safety), pH, and Hardness. Be as precise as possible with your readings.`,
               },
             ],
           },
@@ -86,44 +118,49 @@ Analyze the colors carefully and provide your best estimates based on what you s
             type: "function",
             function: {
               name: "extract_water_parameters",
-              description: "Extract water quality parameters from the analyzed test strip",
+              description: "Extract PRECISE water quality parameters from the analyzed test strip with high accuracy",
               parameters: {
                 type: "object",
                 properties: {
                   chlorine: {
                     type: "number",
-                    description: "Chlorine level in mg/L (ppm). Range 0-3.",
+                    description: "Chlorine level in mg/L with precision to 0.01. Safe range is 0.2-0.5 mg/L. Use exact decimal values like 0.25, 0.35, 0.42, etc.",
                   },
                   chlorineColorObserved: {
                     type: "string",
-                    description: "Description of the chlorine indicator color observed",
+                    description: "EXACT description of the chlorine indicator color (e.g., 'light pink with slight rose tint', 'pink-violet transition', 'deep purple')",
                   },
                   ph: {
                     type: "number",
-                    description: "pH level on scale of 0-14",
+                    description: "pH level with precision to 0.1 (e.g., 7.2, 6.8, 8.3). Range 0-14.",
                   },
                   phColorObserved: {
                     type: "string",
-                    description: "Description of the pH indicator color observed",
+                    description: "EXACT description of the pH indicator color observed (e.g., 'yellow-green', 'bright green', 'blue-green')",
                   },
                   hardness: {
                     type: "number",
-                    description: "Water hardness in ppm (mg/L as CaCO3). Range 0-500.",
+                    description: "Water hardness in ppm (mg/L as CaCO3) with precision to nearest 5 ppm. Range 0-500.",
                   },
                   hardnessColorObserved: {
                     type: "string",
-                    description: "Description of the hardness indicator color observed",
+                    description: "EXACT description of the hardness indicator color observed",
                   },
                   confidence: {
                     type: "number",
-                    description: "Confidence level of the analysis from 0-100",
+                    description: "Confidence level 0-100 based on: image clarity (40%), color distinction (40%), lighting quality (20%)",
+                  },
+                  imageQuality: {
+                    type: "string",
+                    enum: ["excellent", "good", "fair", "poor"],
+                    description: "Overall quality of the test strip image for analysis",
                   },
                   notes: {
                     type: "string",
-                    description: "Any additional observations about the test strip or image quality",
+                    description: "Detailed observations about the analysis, any uncertainties, or recommendations for better results",
                   },
                 },
-                required: ["chlorine", "ph", "hardness", "confidence"],
+                required: ["chlorine", "chlorineColorObserved", "ph", "phColorObserved", "hardness", "confidence"],
                 additionalProperties: false,
               },
             },

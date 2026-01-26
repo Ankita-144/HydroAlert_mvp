@@ -26,6 +26,7 @@ interface InteractiveMapProps {
 interface CustomPoint {
   lat: number;
   lng: number;
+  name: string;
 }
 
 // Custom marker icons based on status
@@ -230,20 +231,32 @@ export function InteractiveMap({ sources, onViewDetails }: InteractiveMapProps) 
 
   // Handle custom point click
   const handleCustomPointClick = (latlng: L.LatLng) => {
-    setCustomPoint({ lat: latlng.lat, lng: latlng.lng });
+    setCustomPoint({ 
+      lat: latlng.lat, 
+      lng: latlng.lng, 
+      name: `Custom Location` 
+    });
     setSelectedSource(null);
     setFlyToLocation([latlng.lat, latlng.lng]);
+  };
+
+  // Handle custom point name change
+  const handleCustomPointNameChange = (name: string) => {
+    if (customPoint) {
+      setCustomPoint({ ...customPoint, name });
+    }
   };
 
   // Handle analyze at custom point
   const handleAnalyzeCustomPoint = () => {
     if (customPoint) {
+      const locationName = customPoint.name.trim() || `Custom Location (${customPoint.lat.toFixed(4)}, ${customPoint.lng.toFixed(4)})`;
       navigate('/upload', { 
         state: { 
           customLocation: {
             lat: customPoint.lat,
             lng: customPoint.lng,
-            name: `Custom Location (${customPoint.lat.toFixed(4)}, ${customPoint.lng.toFixed(4)})`
+            name: locationName
           }
         }
       });
@@ -618,22 +631,29 @@ export function InteractiveMap({ sources, onViewDetails }: InteractiveMapProps) 
       {customPoint && !selectedSource && (
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-card/90 backdrop-blur-md z-[1000] border-t border-border/50">
           <div className="bg-card rounded-xl border shadow-elevated p-4 animate-fade-in">
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="h-6 px-2 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center">
                     <MapPin className="h-3 w-3 mr-1" />
                     Custom Point
                   </div>
                 </div>
-                <h4 className="font-semibold mt-2">Custom Test Location</h4>
-                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                <Input
+                  type="text"
+                  placeholder="Name this location..."
+                  value={customPoint.name}
+                  onChange={(e) => handleCustomPointNameChange(e.target.value)}
+                  className="h-9 text-sm font-medium mb-2"
+                  autoFocus
+                />
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="font-mono text-xs">
                     {customPoint.lat.toFixed(6)}, {customPoint.lng.toFixed(6)}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <Button 
                   size="sm" 
                   variant="ghost"
