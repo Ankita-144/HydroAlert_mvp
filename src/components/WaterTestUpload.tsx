@@ -393,7 +393,7 @@ export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
     // Simulate save delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // For custom locations, create a temporary water source first
+    // For custom locations, create a water source entry first (id returned), then save test.
     let sourceIdToSave = selectedSource;
     let customSourceName = '';
     if (selectedSource === 'custom' && customLocation) {
@@ -403,9 +403,6 @@ export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
         customLocation.lat,
         customLocation.lng
       );
-      
-      // Wait for state to update before adding test result
-      await new Promise(resolve => setTimeout(resolve, 150));
     }
 
     // Save the test result with explicit source name for custom locations
@@ -415,8 +412,12 @@ export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
       chlorine: analysisResult.parameters.chlorine,
       turbidity: analysisResult.parameters.turbidity,
       hardness: analysisResult.parameters.hardness,
-      testedBy: user?.name || 'Unknown User',
+      testedBy: user?.name || 'Aarav Mehta',
       sourceName: customSourceName || undefined,
+      sourceLatitude: selectedSource === 'custom' ? customLocation?.lat : undefined,
+      sourceLongitude: selectedSource === 'custom' ? customLocation?.lng : undefined,
+      sourceLocation: selectedSource === 'custom' ? 'Custom Location' : undefined,
+      sourceBuildingCode: selectedSource === 'custom' ? 'CUSTOM' : undefined,
       notes: analysisResult.status === 'safe' 
         ? 'All parameters within normal range.'
         : analysisResult.status === 'borderline'
