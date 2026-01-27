@@ -14,6 +14,7 @@ import { mockWaterSources as initialSources, mockWaterTests as initialTests } fr
      hardness: number;
      testedBy: string;
      notes?: string;
+     sourceName?: string;
    }) => void;
    addCustomSource: (name: string, latitude: number, longitude: number) => string;
    getSourceById: (id: string) => WaterSource | undefined;
@@ -57,34 +58,41 @@ export function WaterDataProvider({ children }: { children: ReactNode }) {
     hardness: number;
     testedBy: string;
     notes?: string;
+    sourceName?: string; // Allow passing source name for newly created custom sources
   }) => {
-    const source = waterSources.find(s => s.id === sourceId);
-    if (!source) return;
+    // Use functional update to get the latest waterSources state
+    setWaterSources(prevSources => {
+      const source = prevSources.find(s => s.id === sourceId);
+      if (!source) {
+        console.warn('Source not found for ID:', sourceId);
+        return prevSources;
+      }
 
-    // Create new test
-    const newTest: WaterTest = {
-      id: `t${Date.now()}`,
-      sourceId,
-      sourceName: source.name,
-      testDate: new Date(),
-      status: result.status,
-      testedBy: result.testedBy,
-      notes: result.notes,
-      phLevel: result.phLevel,
-      chlorine: result.chlorine,
-      turbidity: result.turbidity,
-      hardness: result.hardness,
-    };
+      // Create new test with correct source name
+      const newTest: WaterTest = {
+        id: `t${Date.now()}`,
+        sourceId,
+        sourceName: result.sourceName || source.name,
+        testDate: new Date(),
+        status: result.status,
+        testedBy: result.testedBy,
+        notes: result.notes,
+        phLevel: result.phLevel,
+        chlorine: result.chlorine,
+        turbidity: result.turbidity,
+        hardness: result.hardness,
+      };
 
-    // Update tests list
-    setWaterTests(prev => [newTest, ...prev]);
+      // Update tests list
+      setWaterTests(prev => [newTest, ...prev]);
 
-    // Update source status
-    setWaterSources(prev => prev.map(s => 
-      s.id === sourceId 
-        ? { ...s, status: result.status, lastTested: new Date(), testedBy: result.testedBy }
-        : s
-    ));
+      // Return updated sources with status change
+      return prevSources.map(s => 
+        s.id === sourceId 
+          ? { ...s, status: result.status, lastTested: new Date(), testedBy: result.testedBy }
+          : s
+      );
+    });
   };
 
   const getSourceById = (id: string) => waterSources.find(s => s.id === id);

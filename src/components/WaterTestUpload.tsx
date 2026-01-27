@@ -395,7 +395,9 @@ export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
 
      // For custom locations, create a temporary water source
      let sourceIdToSave = selectedSource;
+     let customSourceName = '';
     if (selectedSource === 'custom' && customLocation) {
+       customSourceName = customLocation.name;
        sourceIdToSave = addCustomSource(
          customLocation.name,
          customLocation.lat,
@@ -403,20 +405,24 @@ export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
        );
      }
  
-     // Save the test result
-     addTestResult(sourceIdToSave, {
-       status: analysisResult.status,
-       phLevel: analysisResult.parameters.ph,
-       chlorine: analysisResult.parameters.chlorine,
-       turbidity: analysisResult.parameters.turbidity,
-       hardness: analysisResult.parameters.hardness,
-       testedBy: user?.name || 'Unknown User',
-       notes: analysisResult.status === 'safe' 
-         ? 'All parameters within normal range.'
-         : analysisResult.status === 'borderline'
-         ? 'Parameters slightly elevated. Monitoring recommended.'
-         : 'Critical levels detected. Immediate action required.',
-     });
+     // Use setTimeout to ensure state update from addCustomSource has propagated
+     setTimeout(() => {
+       // Save the test result with explicit source name for custom locations
+       addTestResult(sourceIdToSave, {
+         status: analysisResult.status,
+         phLevel: analysisResult.parameters.ph,
+         chlorine: analysisResult.parameters.chlorine,
+         turbidity: analysisResult.parameters.turbidity,
+         hardness: analysisResult.parameters.hardness,
+         testedBy: user?.name || 'Unknown User',
+         sourceName: customSourceName || undefined, // Pass the custom source name
+         notes: analysisResult.status === 'safe' 
+           ? 'All parameters within normal range.'
+           : analysisResult.status === 'borderline'
+           ? 'Parameters slightly elevated. Monitoring recommended.'
+           : 'Critical levels detected. Immediate action required.',
+       });
+     }, 100);
  
      if (selectedSource === 'custom') {
       toast({
