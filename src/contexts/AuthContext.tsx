@@ -17,14 +17,14 @@ const mockUsers: Record<string, User & { password: string }> = {
   'student@campus.edu': {
     id: '1',
     email: 'student@campus.edu',
-    name: 'Alex Johnson',
+    name: 'Aarav Mehta',
     role: 'student',
     password: 'demo123',
   },
   'staff@campus.edu': {
     id: '2',
     email: 'staff@campus.edu',
-    name: 'Dr. Sarah Chen',
+    name: 'Dr. Priya Sharma',
     role: 'staff',
     password: 'demo123',
   },
@@ -38,7 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for stored session
     const storedUser = localStorage.getItem('hydroalert_user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsed = JSON.parse(storedUser) as User;
+
+      // Small migration: keep demo accounts consistent with Indian names
+      const migrated: User =
+        parsed?.email?.toLowerCase() === 'student@campus.edu'
+          ? { ...parsed, name: 'Aarav Mehta' }
+          : parsed?.email?.toLowerCase() === 'staff@campus.edu'
+            ? { ...parsed, name: 'Dr. Priya Sharma' }
+            : parsed;
+
+      setUser(migrated);
+      localStorage.setItem('hydroalert_user', JSON.stringify(migrated));
     }
     setIsLoading(false);
   }, []);

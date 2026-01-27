@@ -15,6 +15,10 @@ import { mockWaterSources as initialSources, mockWaterTests as initialTests } fr
      testedBy: string;
      notes?: string;
      sourceName?: string;
+      sourceLatitude?: number;
+      sourceLongitude?: number;
+      sourceLocation?: string;
+      sourceBuildingCode?: string;
    }) => void;
    addCustomSource: (name: string, latitude: number, longitude: number) => string;
    getSourceById: (id: string) => WaterSource | undefined;
@@ -59,20 +63,22 @@ export function WaterDataProvider({ children }: { children: ReactNode }) {
     testedBy: string;
     notes?: string;
     sourceName?: string;
+    sourceLatitude?: number;
+    sourceLongitude?: number;
+    sourceLocation?: string;
+    sourceBuildingCode?: string;
   }) => {
-    // Find the source first
-    const source = waterSources.find(s => s.id === sourceId);
-    if (!source) {
-      console.warn('Source not found for ID:', sourceId);
-      return;
-    }
+    const now = new Date();
 
-    // Create new test with correct source name
+    // Always add the test (do not depend on synchronous state availability)
+    const resolvedSourceName =
+      result.sourceName || waterSources.find(s => s.id === sourceId)?.name || 'Custom Location';
+
     const newTest: WaterTest = {
       id: `t${Date.now()}`,
       sourceId,
-      sourceName: result.sourceName || source.name,
-      testDate: new Date(),
+      sourceName: resolvedSourceName,
+      testDate: now,
       status: result.status,
       testedBy: result.testedBy,
       notes: result.notes,
@@ -82,15 +88,37 @@ export function WaterDataProvider({ children }: { children: ReactNode }) {
       hardness: result.hardness,
     };
 
-    // Update tests list
     setWaterTests(prev => [newTest, ...prev]);
 
-    // Update source status
-    setWaterSources(prev => prev.map(s => 
-      s.id === sourceId 
-        ? { ...s, status: result.status, lastTested: new Date(), testedBy: result.testedBy }
-        : s
-    ));
+    // Ensure the source exists + update it atomically
+    setWaterSources(prev => {
+      const idx = prev.findIndex(s => s.id === sourceId);
+      if (idx >= 0) {
+        return prev.map(s =>
+          s.id === sourceId
+            ? { ...s, status: result.status, lastTested: now, testedBy: result.testedBy }
+            : s
+        );
+      }
+
+      // If a custom test is saved before the source is present in state, create it here.
+      if (typeof result.sourceLatitude === 'number' && typeof result.sourceLongitude === 'number') {
+        const newSource: WaterSource = {
+          id: sourceId,
+          name: resolvedSourceName,
+          location: result.sourceLocation || 'Custom Location',
+          latitude: result.sourceLatitude,
+          longitude: result.sourceLongitude,
+          status: result.status,
+          lastTested: now,
+          testedBy: result.testedBy,
+          buildingCode: result.sourceBuildingCode || 'CUSTOM',
+        };
+        return [...prev, newSource];
+      }
+
+      return prev;
+    });
   };
 
   const getSourceById = (id: string) => waterSources.find(s => s.id === id);
