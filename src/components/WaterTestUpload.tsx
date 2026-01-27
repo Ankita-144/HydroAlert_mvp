@@ -393,41 +393,41 @@ export function WaterTestUpload({ customLocation }: WaterTestUploadProps) {
     // Simulate save delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
-     // For custom locations, create a temporary water source
-     let sourceIdToSave = selectedSource;
-     let customSourceName = '';
+    // For custom locations, create a temporary water source first
+    let sourceIdToSave = selectedSource;
+    let customSourceName = '';
     if (selectedSource === 'custom' && customLocation) {
-       customSourceName = customLocation.name;
-       sourceIdToSave = addCustomSource(
-         customLocation.name,
-         customLocation.lat,
-         customLocation.lng
-       );
-     }
- 
-     // Use setTimeout to ensure state update from addCustomSource has propagated
-     setTimeout(() => {
-       // Save the test result with explicit source name for custom locations
-       addTestResult(sourceIdToSave, {
-         status: analysisResult.status,
-         phLevel: analysisResult.parameters.ph,
-         chlorine: analysisResult.parameters.chlorine,
-         turbidity: analysisResult.parameters.turbidity,
-         hardness: analysisResult.parameters.hardness,
-         testedBy: user?.name || 'Unknown User',
-         sourceName: customSourceName || undefined, // Pass the custom source name
-         notes: analysisResult.status === 'safe' 
-           ? 'All parameters within normal range.'
-           : analysisResult.status === 'borderline'
-           ? 'Parameters slightly elevated. Monitoring recommended.'
-           : 'Critical levels detected. Immediate action required.',
-       });
-     }, 100);
- 
-     if (selectedSource === 'custom') {
+      customSourceName = customLocation.name;
+      sourceIdToSave = addCustomSource(
+        customLocation.name,
+        customLocation.lat,
+        customLocation.lng
+      );
+      
+      // Wait for state to update before adding test result
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+
+    // Save the test result with explicit source name for custom locations
+    addTestResult(sourceIdToSave, {
+      status: analysisResult.status,
+      phLevel: analysisResult.parameters.ph,
+      chlorine: analysisResult.parameters.chlorine,
+      turbidity: analysisResult.parameters.turbidity,
+      hardness: analysisResult.parameters.hardness,
+      testedBy: user?.name || 'Unknown User',
+      sourceName: customSourceName || undefined,
+      notes: analysisResult.status === 'safe' 
+        ? 'All parameters within normal range.'
+        : analysisResult.status === 'borderline'
+        ? 'Parameters slightly elevated. Monitoring recommended.'
+        : 'Critical levels detected. Immediate action required.',
+    });
+
+    if (selectedSource === 'custom' && customLocation) {
       toast({
         title: 'Result Saved',
-          description: `Custom location "${customLocation.name}" added to monitoring dashboard.`,
+        description: `Custom location "${customLocation.name}" added to monitoring dashboard.`,
       });
     } else {
       toast({

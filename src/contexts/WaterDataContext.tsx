@@ -58,41 +58,39 @@ export function WaterDataProvider({ children }: { children: ReactNode }) {
     hardness: number;
     testedBy: string;
     notes?: string;
-    sourceName?: string; // Allow passing source name for newly created custom sources
+    sourceName?: string;
   }) => {
-    // Use functional update to get the latest waterSources state
-    setWaterSources(prevSources => {
-      const source = prevSources.find(s => s.id === sourceId);
-      if (!source) {
-        console.warn('Source not found for ID:', sourceId);
-        return prevSources;
-      }
+    // Find the source first
+    const source = waterSources.find(s => s.id === sourceId);
+    if (!source) {
+      console.warn('Source not found for ID:', sourceId);
+      return;
+    }
 
-      // Create new test with correct source name
-      const newTest: WaterTest = {
-        id: `t${Date.now()}`,
-        sourceId,
-        sourceName: result.sourceName || source.name,
-        testDate: new Date(),
-        status: result.status,
-        testedBy: result.testedBy,
-        notes: result.notes,
-        phLevel: result.phLevel,
-        chlorine: result.chlorine,
-        turbidity: result.turbidity,
-        hardness: result.hardness,
-      };
+    // Create new test with correct source name
+    const newTest: WaterTest = {
+      id: `t${Date.now()}`,
+      sourceId,
+      sourceName: result.sourceName || source.name,
+      testDate: new Date(),
+      status: result.status,
+      testedBy: result.testedBy,
+      notes: result.notes,
+      phLevel: result.phLevel,
+      chlorine: result.chlorine,
+      turbidity: result.turbidity,
+      hardness: result.hardness,
+    };
 
-      // Update tests list
-      setWaterTests(prev => [newTest, ...prev]);
+    // Update tests list
+    setWaterTests(prev => [newTest, ...prev]);
 
-      // Return updated sources with status change
-      return prevSources.map(s => 
-        s.id === sourceId 
-          ? { ...s, status: result.status, lastTested: new Date(), testedBy: result.testedBy }
-          : s
-      );
-    });
+    // Update source status
+    setWaterSources(prev => prev.map(s => 
+      s.id === sourceId 
+        ? { ...s, status: result.status, lastTested: new Date(), testedBy: result.testedBy }
+        : s
+    ));
   };
 
   const getSourceById = (id: string) => waterSources.find(s => s.id === id);
