@@ -1,73 +1,87 @@
-# Welcome to your Lovable project
+# HydroAlert
 
-## Project info
+HydroAlert is a web-based system for continuous water quality monitoring using AI-assisted analysis of chemical test strips. It is designed to detect early signs of contamination and prevent large-scale water safety failures in institutional environments such as campuses.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Problem Statement
 
-## How can I edit this code?
+Water quality in campuses is typically checked reactively, only after visible issues or health incidents occur. This delay leads to high financial costs, health risks, and reputational damage.
 
-There are several ways of editing your application.
+HydroAlert addresses this gap by enabling daily, outlet-level monitoring instead of infrequent manual testing.
 
-**Use Lovable**
+## Solution Overview
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+HydroAlert combines low-cost chemical testing with AI-based analysis to generate actionable insights:
 
-Changes made via Lovable will be committed automatically to this repo.
+* Chemical test strips capture parameters such as chlorine, pH, and hardness
+* Image-based analysis is performed using Gemini-based vision models
+* Results are converted into clear safety classifications and alerts
+* A centralized dashboard provides real-time monitoring and historical tracking
 
-**Use your preferred IDE**
+## Key Detection Logic
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+The system focuses on indicators that correlate strongly with contamination risk:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+* Low residual chlorine
+  Indicates possible disinfection failure
 
-Follow these steps:
+* Abnormal pH levels
+  Chlorine effectiveness drops outside the (0.5-1)ppm for drinking water range
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+* Sudden chemical drops
+  May indicate sewage intrusion or presence of organic pathogens
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+These signals allow early detection before microbial outbreaks occur.
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Features
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+* Daily monitoring of water sources at outlet level
+* AI-based interpretation of test strip data
+* Real-time dashboard with safety classification (Safe / Borderline / Unsafe)
+* Alert system for contamination risks
+* Historical logs for accountability and audits
+
+## Impact
+
+* Shifts water safety from reactive to preventive
+* Reduces emergency response costs significantly
+* Provides transparency to users and accountability to institutions
+* Enables data-driven decision making for maintenance and safety
+
+## Accuracy
+
+The current prototype achieves approximately 85% accuracy in interpreting chemical strip data under controlled conditions.
+
+## Tech Stack
+
+* Frontend: React (Vite)
+* Styling: Tailwind CSS
+* Backend / Database: Supabase
+* AI Component: Gemini-based image analysis
+
+## Project Status
+
+This project is a working MVP (Minimum Viable Prototype) demonstrating the feasibility of AI-assisted water monitoring.
+
+It was selected for presentation at IIT Delhi (BEcon 2026).
+
+## How to Run
+
+```bash
+git clone https://github.com/your-username/HydroAlert_mvp.git
+cd HydroAlert_mvp
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Future Work
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+* Improve model accuracy across varying lighting conditions
+* Automate calibration of strip color interpretation
+* Integrate IoT-based real-time sensing
+* Expand deployment to larger institutional networks
 
-**Use GitHub Codespaces**
+## Authors
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Ankita Kumari
+Koppeti Pushkar
+Vivek Kumar Khandelwal
