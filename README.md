@@ -65,13 +65,7 @@ This project is a working MVP (Minimum Viable Prototype) demonstrating the feasi
 It was selected for presentation at IIT Delhi (BEcon 2026).
 
 ## How to Run
-
-```bash
-git clone https://github.com/your-username/HydroAlert_mvp.git
-cd HydroAlert_mvp
-npm install
-npm run dev
-```
+https://hydroalert-mvp.lovable.app
 
 ## Future Work
 
